@@ -11,10 +11,158 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Unzip project
+      - name: Arrange files and generate Gradle + Kotlin
         run: |
-          unzip -o '*.zip'
-          if [ -f index.html ]; then mkdir -p app/src/main/assets && cp index.html app/src/main/assets/index.html; fi
+          mkdir -p app/src/main/assets app/src/main/res/xml app/src/main/res/values app/src/main/res/drawable app/src/main/java/com/krishnanagar/pollingtracker
+          cp index.html app/src/main/assets/index.html
+          cp AndroidManifest.xml app/src/main/AndroidManifest.xml
+          cp file_paths.xml app/src/main/res/xml/file_paths.xml
+          cp ic_launcher_tracker.xml app/src/main/res/drawable/ic_launcher_tracker.xml
+          cp strings.xml app/src/main/res/values/strings.xml
+          cp themes.xml app/src/main/res/values/themes.xml
+
+          cat << 'EOF' > settings.gradle.kts
+          pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories { google(); mavenCentral() }
+          }
+          rootProject.name = "BoothPollingTracker"
+          include(":app")
+          EOF
+
+          cat << 'EOF' > build.gradle.kts
+          plugins {
+              id("com.android.application") version "8.7.2" apply false
+              id("org.jetbrains.kotlin.android") version "2.0.21" apply false
+          }
+          EOF
+
+          cat << 'EOF' > gradle.properties
+          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+          android.useAndroidX=true
+          kotlin.code.style=official
+          android.nonTransitiveRClass=true
+          EOF
+
+          cat << 'EOF' > app/build.gradle.kts
+          plugins {
+              id("com.android.application")
+              id("org.jetbrains.kotlin.android")
+          }
+          android {
+              namespace = "com.krishnanagar.pollingtracker"
+              compileSdk = 35
+              defaultConfig {
+                  applicationId = "com.krishnanagar.pollingtracker"
+                  minSdk = 24
+                  targetSdk = 34
+                  versionCode = 3
+                  versionName = "1.2"
+              }
+              compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
+              kotlinOptions { jvmTarget = "17" }
+          }
+          dependencies {
+              implementation("androidx.core:core-ktx:1.15.0")
+              implementation("androidx.appcompat:appcompat:1.7.0")
+              implementation("androidx.activity:activity-ktx:1.9.3")
+          }
+          EOF
+
+          cat << 'EOF' > app/src/main/java/com/krishnanagar/pollingtracker/MainActivity.kt
+          package com.krishnanagar.pollingtracker
+
+          import android.annotation.SuppressLint
+          import android.content.Intent
+          import android.graphics.Color
+          import android.net.Uri
+          import android.os.Bundle
+          import android.view.ViewGroup
+          import android.webkit.*
+          import android.widget.FrameLayout
+          import androidx.activity.OnBackPressedCallback
+          import androidx.activity.result.contract.ActivityResultContracts
+          import androidx.appcompat.app.AppCompatActivity
+          import androidx.core.content.FileProvider
+          import java.io.File
+
+          class MainActivity : AppCompatActivity() {
+              private lateinit var webView: WebView
+              private var filePathCallback: ValueCallback<Array<Uri>>? = null
+              private val fileChooser = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+                  filePathCallback?.onReceiveValue(if (uri != null) arrayOf(uri) else null)
+                  filePathCallback = null
+              }
+
+              @SuppressLint("SetJavaScriptEnabled")
+              override fun onCreate(savedInstanceState: Bundle?) {
+                  super.onCreate(savedInstanceState)
+                  val root = FrameLayout(this).apply {
+                      setBackgroundColor(Color.parseColor("#0f223d"))
+                      fitsSystemWindows = true
+                      layoutParams = ViewGroup.LayoutParams(-1, -1)
+                  }
+                  webView = WebView(this).apply { layoutParams = FrameLayout.LayoutParams(-1, -1) }
+                  root.addView(webView)
+                  setContentView(root)
+
+                  webView.settings.apply {
+                      javaScriptEnabled = true
+                      domStorageEnabled = true
+                      allowFileAccess = true
+                      cacheMode = WebSettings.LOAD_NO_CACHE
+                      blockNetworkLoads = true
+                  }
+                  webView.webViewClient = object : WebViewClient() {
+                      override fun shouldOverrideUrlLoading(v: WebView?, r: WebResourceRequest?): Boolean {
+                          val u = r?.url?.toString() ?: return false
+                          if (u.startsWith("tel:")) { startActivity(Intent(Intent.ACTION_DIAL, Uri.parse(u))); return true }
+                          return false
+                      }
+                  }
+                  webView.webChromeClient = object : WebChromeClient() {
+                      override fun onShowFileChooser(v: WebView?, cb: ValueCallback<Array<Uri>>?, p: FileChooserParams?): Boolean {
+                          filePathCallback?.onReceiveValue(null); filePathCallback = cb; fileChooser.launch("*/*"); return true
+                      }
+                  }
+                  webView.addJavascriptInterface(AndroidShareBridge(), "AndroidBridge")
+                  webView.loadUrl("file:///android_asset/index.html")
+                  onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+                      override fun handleOnBackPressed() { if (webView.canGoBack()) webView.goBack() else finish() }
+                  })
+              }
+
+              inner class AndroidShareBridge {
+                  @JavascriptInterface
+                  fun shareFile(filename: String, content: String, mime: String, summary: String) {
+                      runOnUiThread {
+                          try {
+                              val dir = File(cacheDir, "exports").apply { mkdirs() }
+                              val safe = filename.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+                              val f = File(dir, safe).apply { writeText(content, Charsets.UTF_8) }
+                              val uri = FileProvider.getUriForFile(this@MainActivity, "${applicationContext.packageName}.fileprovider", f)
+                              startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
+                                  type = mime.substringBefore(";")
+                                  putExtra(Intent.EXTRA_STREAM, uri)
+                                  putExtra(Intent.EXTRA_TEXT, summary)
+                                  putExtra(Intent.EXTRA_SUBJECT, safe)
+                                  addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                              }, "ফাইল শেয়ার করুন"))
+                          } catch (e: Exception) { e.printStackTrace() }
+                      }
+                  }
+                  @JavascriptInterface
+                  fun shareText(summary: String) {
+                      runOnUiThread {
+                          startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
+                              type = "text/plain"; putExtra(Intent.EXTRA_TEXT, summary)
+                          }, "রিপোর্ট শেয়ার করুন"))
+                      }
+                  }
+              }
+          }
+          EOF
 
       - uses: actions/setup-java@v4
         with:
@@ -35,4 +183,4 @@ jobs:
           name: Booth-Polling-Tracker-v1.2-APK
           path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 90
-         
+          
