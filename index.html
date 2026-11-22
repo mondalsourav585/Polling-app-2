@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>বুথ-ডে ও পোলিং ট্র্যাকার — অফলাইন অ্যাপ</title>
+  <style>
+    :root {
+      --bg: #f1f5f9;
+      --surface: #ffffff;
+      --primary: #1b365d;
+      --primary-dark: #0f223d;
+      --accent: #0d9488;
+      --accent-soft: #ccfbf1;
+      --voted: #16a34a;
+      --voted-bg: #dcfce7;
+      --voted-border: #86efac;
+      --priority: #d97706;
+      --priority-bg: #fef3c7;
+      --danger: #dc2626;
+      --danger-bg: #fee2e2;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --radius: 12px;
+      --shadow: 0 2px 8px rgba(15, 23, 42, 0.07);
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Noto Sans Bengali", "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding-bottom: 76px;
+      overflow-x: hidden;
+    }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: #fff;
+      padding: 12px 14px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+    }
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .app-title {
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1.25;
+    }
+    .app-sub {
+      font-size: 11px;
+      color: #cbd5e1;
+      margin-top: 2px;
+    }
+    .badge-offline {
+      background: rgba(255,255,255,0.14);
+      border: 1px solid rgba(255,255,255,0.25);
+      color: #e2e8f0;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+    .live-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-top: 10px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 10px;
+      padding: 7px 8px;
+    }
+    .live-cell {
+      text-align: center;
+    }
+    .live-val {
+      font-size: 15px;
+      font-weight: 800;
+      color: #fff;
+    }
+    .live-lbl {
+      font-size: 10px;
+      color: #cbd5e1;
+    }
+    main {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 12px;
+    }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px;
+      margin-bottom: 12px;
+      box-shadow: var(--shadow);
+    }
+    .card-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--primary);
+      margin: 0 0 10px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    label.field-lbl {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    select, input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 9px 10px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 14px;
+      background: #fff;
+      color: var(--text);
+      outline: none;
+    }
+    select:focus, input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(27,54,93,0.12);
+    }
+    .chips {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      margin-top: 8px;
+    }
+    .chip {
+      border: 1px solid #cbd5e1;
+      background: #f8fafc;
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 11px;
+      border-radius: 999px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .chip.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+    .mode-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 10px;
+      margin-top: 8px;
+      gap: 8px;
+    }
+    .mode-text {
+      font-size: 12px;
+      color: var(--text);
+      font-weight: 600;
+    }
+    .mode-sub {
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 400;
+    }
+    .switch-btn {
+      border: none;
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      background: #e2e8f0;
+      color: var(--text);
+      white-space: nowrap;
+    }
+    .switch-btn.on {
+      background: var(--voted);
+      color: #fff;
+    }
+
+    /* Serial Grid */
+    .serial-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 7px;
+    }
+    @media (min-width: 520px) {
+      .serial-grid { grid-template-columns: repeat(8, 1fr); }
+    }
+    .sl-btn {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 48px;
+      padding: 4px 2px;
+      border-radius: 9px;
+      border: 1.5px solid #cbd5e1;
+      background: #fff;
+      color: var(--text);
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.08s ease;
+    }
+    .sl-btn:active { transform: scale(0.95); }
+    .sl-btn.voted {
+      background: var(--voted-bg);
+      border-color: var(--voted);
+      color: #14532d;
+    }
+    .sl-btn.priority {
+      border-color: var(--priority);
+      box-shadow: inset 0 0 0 1px var(--priority);
+    }
+    .sl-btn.priority:not(.voted) {
+      background: var(--priority-bg);
+    }
+    .sl-sub {
+      font-size: 9px;
+      font-weight: 600;
+      color: var(--muted);
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      padding: 0 3px;
+    }
+    .sl-btn.voted .sl-sub { color: #166534; }
+    .sl-star {
+      position: absolute;
+      top: 2px;
+      right: 4px;
+      font-size: 10px;
+      color: var(--priority);
+      line-height: 1;
+    }
+    .sl-check {
+      position: absolute;
+      top: 2px;
+      left: 4px;
+      font-size: 10px;
+      color: var(--voted);
+      line-height: 1;
+      font-weight: 900;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 10px 14px;
+      border-radius: 9px;
+      border: none;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-accent { background: var(--accent); color: #fff; }
+    .btn-voted { background: var(--voted); color: #fff; }
+    .btn-outline { background: #fff; color: var(--primary); border: 1px solid #cbd5e1; }
+    .btn-danger { background: var(--danger-bg); color: var(--danger); border: 1px solid #fecaca; }
+    .btn-sm { padding: 7px 10px; font-size: 12px; }
+    .btn-block { width: 100%; }
+
+    /* Stats & Charts */
+    .stat-boxes {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .stat-box {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+    }
+    .stat-num { font-size: 20px; font-weight: 800; color: var(--primary); }
+    .stat-lbl { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .prog-track {
+      width: 100%;
+      height: 10px;
+      background: #e2e8f0;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+    .prog-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--voted));
+      border-radius: 999px;
+      transition: width 0.25s ease;
+    }
+    .bar-row {
+      display: grid;
+      grid-template-columns: 74px 1fr 48px;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      font-size: 12px;
+    }
+    .bar-track {
+      height: 14px;
+      background: #f1f5f9;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      background: var(--primary);
+      border-radius: 999px;
+    }
+
+    /* Pending List */
+    .voter-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .voter-item:last-child { border-bottom: none; }
+    .v-name { font-size: 14px; font-weight: 700; color: var(--text); }
+    .v-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .tag {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 999px;
+      margin-right: 4px;
+    }
+    .tag-star { background: var(--priority-bg); color: #92400e; }
+    .tag-voted { background: var(--voted-bg); color: #166534; }
+
+    /* Bottom Nav */
+    nav.bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 40;
+      background: #fff;
+      border-top: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      padding: 6px 4px;
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.06);
+    }
+    .nav-btn {
+      background: none;
+      border: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 4px 2px;
+    }
+    .nav-btn.active { color: var(--primary); }
+    .nav-btn svg { width: 20px; height: 20px; }
+
+    /* Modal & Toast */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.55);
+      z-index: 60;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 12px;
+    }
+    .modal-backdrop.open { display: flex; }
+    @media (min-width: 520px) {
+      .modal-backdrop { align-items: center; }
+    }
+    .modal-box {
+      background: #fff;
+      width: 100%;
+      max-width: 440px;
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.22);
+    }
+    .toast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #0f172a;
+      color: #fff;
+      padding: 9px 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      z-index: 70;
+      display: none;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+      max-width: 92vw;
+    }
+    .toast.show { display: flex; }
+    .toast-undo {
+      background: #f59e0b;
+      color: #0f172a;
+      border: none;
+      border-radius: 999px;
+      padding: 3px 9px;
+      font-size: 11px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .hidden-file { display: none; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <div>
+        <div class="app-title" id="hdrTitle">বুথ-ডে ও পোলিং ট্র্যাকার</div>
+        <div class="app-sub" id="hdrSub">নমুনা বুথ ৯০ • ১০০% অফলাইন মোড</div>
+      </div>
+      <span class="badge-offline">অফলাইন রেডি</span>
+    </div>
+    <div class="live-strip">
+      <div class="live-cell">
+        <div class="live-val" id="topVoted">০ / ৫০</div>
+        <div class="live-lbl">ভোট পড়েছে</div>
+      </div>
+      <div class="live-cell">
+        <div class="live-val" id="topPct">০%</div>
+        <div class="live-lbl">ভোটের হার</div>
+      </div>
+      <div class="live-cell">
+        <div class="live-val" id="topRemain">৫০</div>
+        <div class="live-lbl">ভোট বাকি</div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- TAB 1: POLLING GRID -->
+    <section id="tab-grid" class="tab-pane active">
+      <div class="card">
+        <div class="grid-2">
+          <div>
+            <label class="field-lbl" for="boothSelect">বুথ নির্বাচন</label>
+            <select id="boothSelect"></select>
+          </div>
+          <div>
+            <label class="field-lbl" for="searchInput">ক্রমিক / নাম খুঁজুন</label>
+            <input type="text" id="searchInput" placeholder="যেমন: 45 বা ঘোষ..." />
+          </div>
+        </div>
+        <div class="chips" id="gridFilterChips">
+          <button type="button" class="chip active" data-filter="all">সব ভোটার</button>
+          <button type="button" class="chip" data-filter="pending">ভোট বাকি</button>
+          <button type="button" class="chip" data-filter="voted">ভোট দিয়েছেন</button>
+          <button type="button" class="chip" data-filter="priority">★ সমর্থক / ফলো-আপ</button>
+        </div>
+        <div class="mode-bar">
+          <div>
+            <div class="mode-text" id="tapModeLabel">১-ট্যাপ কুইক ভোট মোড: চালু</div>
+            <div class="mode-sub">নম্বরে ট্যাপ করলেই ভোট মার্ক হবে; ডিটেইল দেখতে মোড বন্ধ করুন</div>
+          </div>
+          <button type="button" id="toggleTapModeBtn" class="switch-btn on">চালু</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <span id="gridCountLabel">সিরিয়াল নম্বর গ্রিড</span>
+          <span style="font-size:11px; color:var(--muted); font-weight:600;">সবুজ = ভোট ✓ | হলুদ = ★</span>
+        </div>
+        <div class="serial-grid" id="serialGrid"></div>
+      </div>
+    </section>
+
+    <!-- TAB 2: TURNOUT ANALYTICS -->
+    <section id="tab-turnout" class="tab-pane">
+      <div class="card">
+        <div class="card-title">
+          <span>বুথ টার্নআউট সারসংক্ষেপ</span>
+          <button type="button" id="shareSummaryBtn" class="btn btn-outline btn-sm">রিপোর্ট শেয়ার</button>
+        </div>
+        <div class="stat-boxes">
+          <div class="stat-box">
+            <div class="stat-num" id="stVoted">০</div>
+            <div class="stat-lbl">মোট ভোট পড়েছে</div>
+            <div class="prog-track"><div class="prog-fill" id="stProgBar" style="width:0%"></div></div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" id="stPending">০</div>
+            <div class="stat-lbl">এখনো ভোট বাকি</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" id="stMalePct">০%</div>
+            <div class="stat-lbl" id="stMaleLbl">পুরুষ ভোট (০/০)</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" id="stFemalePct">০%</div>
+            <div class="stat-lbl" id="stFemaleLbl">মহিলা ভোট (০/০)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span>সময় অনুযায়ী ভোটের গতি (ঘণ্টাভিত্তিক)</span></div>
+        <div id="hourlyChart"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span>পাড়া / সেকশন অনুযায়ী ভোটের হার</span></div>
+        <div id="sectionChart"></div>
+      </div>
+    </section>
+
+    <!-- TAB 3: PENDING / FOLLOW-UP LIST -->
+    <section id="tab-pending" class="tab-pane">
+      <div class="card">
+        <div class="card-title">
+          <span>বাকি ভোটার ও কল লিস্ট</span>
+          <button type="button" id="sharePendingBtn" class="btn btn-accent btn-sm">বাকি লিস্ট শেয়ার</button>
+        </div>
+        <div class="grid-2">
+          <div>
+            <label class="field-lbl" for="pendingFilter">ফিল্টার</label>
+            <select id="pendingFilter">
+              <option value="priority_pending">★ সমর্থক (ভোট বাকি)</option>
+              <option value="all_pending">সব বাকি ভোটার</option>
+              <option value="all_priority">সব ★ সমর্থক</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-lbl" for="pendingSectionFilter">পাড়া / সেকশন</label>
+            <select id="pendingSectionFilter">
+              <option value="all">সব পাড়া</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span id="pendingCountLbl">তালিকা</span></div>
+        <div id="pendingList"></div>
+      </div>
+    </section>
+
+    <!-- TAB 4: SETUP, IMPORT & EXPORT -->
+    <section id="tab-setup" class="tab-pane">
+      <div class="card">
+        <div class="card-title"><span>১. ওয়ার্ড JSON ফাইল লোড করুন</span></div>
+        <p style="font-size:12px; color:var(--muted); margin:0 0 10px 0;">
+          কৃষ্ণনগর ওয়ার্ড ১৭, ওয়ার্ড ১৮ বা যেকোনো মাস্টার অ্যাপের JSON ফাইল সরাসরি এখান থেকে ইমপোর্ট করুন।
+        </p>
+        <input type="file" id="jsonFileInput" class="hidden-file" accept=".json,application/json" />
+        <button type="button" id="importJsonBtn" class="btn btn-primary btn-block">+ ওয়ার্ড JSON ফাইল সিলেক্ট করুন</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span>২. JSON ছাড়াই কুইক বুথ তৈরি করুন</span></div>
+        <div class="grid-2">
+          <div>
+            <label class="field-lbl" for="quickBoothNo">বুথ নম্বর</label>
+            <input type="number" id="quickBoothNo" placeholder="যেমন: 92" min="1" />
+          </div>
+          <div>
+            <label class="field-lbl" for="quickTotalVoters">মোট ভোটার সংখ্যা</label>
+            <input type="number" id="quickTotalVoters" placeholder="যেমন: 850" min="1" max="3000" />
+          </div>
+        </div>
+        <button type="button" id="createQuickBoothBtn" class="btn btn-accent btn-block" style="margin-top:10px;">বুথ গ্রিড তৈরি করুন</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span>৩. পোলিং ডেটা ব্যাকআপ ও মার্জ</span></div>
+        <div class="grid-2">
+          <button type="button" id="exportPollingJsonBtn" class="btn btn-outline">ডেটা ব্যাকআপ (JSON)</button>
+          <button type="button" id="exportPollingCsvBtn" class="btn btn-outline">CSV এক্সপোর্ট</button>
+        </div>
+        <input type="file" id="mergeBackupInput" class="hidden-file" accept=".json,application/json" />
+        <button type="button" id="mergeBackupBtn" class="btn btn-outline btn-block" style="margin-top:8px;">অন্য ফোনের পোলিং ব্যাকআপ মার্জ করুন</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span style="color:var(--danger);">রিসেট অপশন</span></div>
+        <button type="button" id="resetVotesBtn" class="btn btn-danger btn-block">এই বুথের সব ভোট মার্ক রিসেট করুন</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Voter Detail Modal -->
+  <div id="voterModal" class="modal-backdrop">
+    <div class="modal-box">
+      <div class="card-title" style="margin-bottom:6px;">
+        <span id="mTitle">ক্রমিক #১</span>
+        <button type="button" id="mCloseBtn" class="btn btn-outline btn-sm">বন্ধ করুন</button>
+      </div>
+      <div id="mBody" style="font-size:13px; line-height:1.55; margin-bottom:12px;"></div>
+      <div class="grid-2">
+        <button type="button" id="mToggleVoteBtn" class="btn btn-voted">ভোট দিয়েছেন ✓</button>
+        <button type="button" id="mToggleStarBtn" class="btn btn-outline">★ সমর্থক মার্ক</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm Reset Modal -->
+  <div id="confirmModal" class="modal-backdrop">
+    <div class="modal-box">
+      <div class="card-title" style="color:var(--danger);">নিশ্চিত করুন</div>
+      <p id="confirmMsg" style="font-size:13px; color:var(--text); margin:0 0 14px 0;"></p>
+      <div class="grid-2">
+        <button type="button" id="confirmCancelBtn" class="btn btn-outline">বাতিল</button>
+        <button type="button" id="confirmOkBtn" class="btn btn-danger">হ্যাঁ, রিসেট করুন</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast with Undo -->
+  <div id="toast" class="toast">
+    <span id="toastMsg"></span>
+    <button type="button" id="toastUndoBtn" class="toast-undo" style="display:none;">Undo</button>
+  </div>
+
+  <nav class="bottom-nav">
+    <button type="button" class="nav-btn active" data-tab="tab-grid">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      <span>পোলিং গ্রিড</span>
+    </button>
+    <button type="button" class="nav-btn" data-tab="tab-turnout">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+      <span>টার্নআউট</span>
+    </button>
+    <button type="button" class="nav-btn" data-tab="tab-pending">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      <span>বাকি তালিকা</span>
+    </button>
+    <button type="button" class="nav-btn" data-tab="tab-setup">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.85 1 1.51 1H21a2 2 0 0 1 0 4h-.09c-.66 0-1.25.4-1.51 1z"/></svg>
+      <span>সেটআপ</span>
+    </button>
+  </nav>
+
+  <script>
+    (function () {
+      const BN_DIGITS = "০১২৩৪৫৬৭৮৯";
+      function toBn(n) {
+        return String(n).replace(/\d/g, d => BN_DIGITS[Number(d)]);
+      }
+      function loadLS(k, fb) {
+        try {
+          const v = localStorage.getItem(k);
+          return v ? JSON.parse(v) : fb;
+        } catch (e) { return fb; }
+      }
+      function saveLS(k, val) {
+        try { localStorage.setItem(k, JSON.stringify(val)); } catch (e) {}
+      }
+
+      // Built-in sample 50-voter pack so app opens immediately usable
+      function buildSamplePack() {
+        const sampleNames = ["অমিত ঘোষ","সুমিতা ঘোষ","রাহুল বিশ্বাস","প্রিয়াঙ্কা মণ্ডল","সঞ্জয় দাস","মৌসুমী দাস","তাপস সরকার","অনিতা সরকার","বিপ্লব দেবনাথ","শিল্পা পাল"];
+        const voters = [];
+        for (let i = 1; i <= 50; i++) {
+          const sec = i <= 25 ? 1 : 2;
+          const gen = i % 2 === 0 ? "F" : "M";
+          const nm = sampleNames[(i - 1) % sampleNames.length] + " (" + toBn(i) + ")";
+          voters.push([90, i, sec, nm, "F", "নমুনা অভিভাবক", String(10 + Math.floor(i / 3)), String(10 + Math.floor(i / 3)), 22 + (i % 45), gen, 0, 0, 1]);
+        }
+        return {
+          id: "sample_w17",
+          city: "কৃষ্ণনগর পৌরসভা",
+          ward: "নমুনা",
+          title: "নমুনা বুথ (ডেমো)",
+          subtitle: "আপনার ওয়ার্ড JSON লোড করুন বা কুইক বুথ তৈরি করুন",
+          sections: { "90": { "1": "অরবিন্দ সরণী (উত্তর)", "2": "বিপ্রদাস পালচৌধুরী রোড" } },
+          voters: voters
+        };
+      }
+
+      const LS_PACK = "bpt_pack_v1";
+      const LS_VOTES = "bpt_votes_v1"; // { "booth_sl": timestamp_ms }
+      const LS_STARS = "bpt_stars_v1"; // { "booth_sl": 1 }
+
+      let pack = loadLS(LS_PACK, null) || buildSamplePack();
+      let votesMap = loadLS(LS_VOTES, {});
+      let starsMap = loadLS(LS_STARS, {});
+      let quickTapMode = true;
+      let currentBooth = null;
+      let gridFilter = "all";
+      let lastUndo = null;
+      let modalVoter = null;
+      let toastTimer = null;
+
+      function getBooths() {
+        const set = new Set();
+        (pack.voters || []).forEach(v => set.add(v[0]));
+        return Array.from(set).sort((a, b) => a - b);
+      }
+
+      function vKey(booth, sl) {
+        return booth + "_" + sl;
+      }
+
+      function showToast(msg, undoFn) {
+        const el = document.getElementById("toast");
+        const msgEl = document.getElementById("toastMsg");
+        const undoBtn = document.getElementById("toastUndoBtn");
+        msgEl.textContent = msg;
+        if (undoFn) {
+          lastUndo = undoFn;
+          undoBtn.style.display = "inline-block";
+        } else {
+          lastUndo = null;
+          undoBtn.style.display = "none";
+        }
+        el.classList.add("show");
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => { el.classList.remove("show"); }, 3200);
+      }
+
+      document.getElementById("toastUndoBtn").addEventListener("click", () => {
+        if (lastUndo) {
+          lastUndo();
+          lastUndo = null;
+          document.getElementById("toast").classList.remove("show");
+        }
+      });
+
+      function populateBooths() {
+        const booths = getBooths();
+        const sel = document.getElementById("boothSelect");
+        sel.innerHTML = "";
+        booths.forEach(b => {
+          const opt = document.createElement("option");
+          opt.value = String(b);
+          const cnt = pack.voters.filter(v => v[0] === b).length;
+          opt.textContent = "বুথ " + toBn(b) + " (" + toBn(cnt) + " জন)";
+          sel.appendChild(opt);
+        });
+        if (!currentBooth || !booths.includes(currentBooth)) {
+          currentBooth = booths[0] || 90;
+        }
+        sel.value = String(currentBooth);
+        populateSectionFilter();
+      }
+
+      function populateSectionFilter() {
+        const sel = document.getElementById("pendingSectionFilter");
+        sel.innerHTML = '<option value="all">সব পাড়া</option>';
+        const secs = (pack.sections && pack.sections[String(currentBooth)]) || {};
+        Object.keys(secs).sort((a, b) => Number(a) - Number(b)).forEach(k => {
+          const opt = document.createElement("option");
+          opt.value = k;
+          opt.textContent = secs[k];
+          sel.appendChild(opt);
+        });
+      }
+
+      function getBoothVoters() {
+        return (pack.voters || []).filter(v => v[0] === currentBooth);
+      }
+
+      function updateHeader() {
+        const list = getBoothVoters();
+        const total = list.length;
+        let voted = 0;
+        list.forEach(v => { if (votesMap[vKey(v[0], v[1])]) voted++; });
+        const pct = total ? Math.round((voted / total) * 100) : 0;
+        document.getElementById("hdrTitle").textContent = pack.title || "বুথ-ডে ও পোলিং ট্র্যাকার";
+        document.getElementById("hdrSub").textContent = "বুথ " + toBn(currentBooth) + " • " + (pack.subtitle || "অফলাইন মোড");
+        document.getElementById("topVoted").textContent = toBn(voted) + " / " + toBn(total);
+        document.getElementById("topPct").textContent = toBn(pct) + "%";
+        document.getElementById("topRemain").textContent = toBn(total - voted);
+      }
+
+      function renderGrid() {
+        const list = getBoothVoters();
+        const q = (document.getElementById("searchInput").value || "").trim().toLowerCase();
+        const filtered = list.filter(v => {
+          const k = vKey(v[0], v[1]);
+          const isVoted = Boolean(votesMap[k]);
+          const isStar = Boolean(starsMap[k]);
+          if (gridFilter === "pending" && isVoted) return false;
+          if (gridFilter === "voted" && !isVoted) return false;
+          if (gridFilter === "priority" && !isStar) return false;
+          if (q) {
+            const slStr = String(v[1]);
+            const nameStr = String(v[3] || "").toLowerCase();
+            if (!slStr.includes(q) && !nameStr.includes(q)) return false;
+          }
+          return true;
+        });
+
+        document.getElementById("gridCountLabel").textContent = "সিরিয়াল গ্রিড (" + toBn(filtered.length) + " জন)";
+        const grid = document.getElementById("serialGrid");
+        if (!filtered.length) {
+          grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:24px; color:var(--muted); font-size:13px;">কোনো ভোটার পাওয়া যায়নি</div>';
+          return;
+        }
+        const frag = document.createDocumentFragment();
+        filtered.forEach(v => {
+          const k = vKey(v[0], v[1]);
+          const isVoted = Boolean(votesMap[k]);
+          const isStar = Boolean(starsMap[k]);
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "sl-btn" + (isVoted ? " voted" : "") + (isStar ? " priority" : "");
+          btn.dataset.sl = String(v[1]);
+          const firstName = String(v[3] || "").split(" ")[0] || "";
+          btn.innerHTML =
+            (isVoted ? '<span class="sl-check">✓</span>' : '') +
+            (isStar ? '<span class="sl-star">★</span>' : '') +
+            '<span>' + v[1] + '</span>' +
+            '<span class="sl-sub">' + escapeHtml(firstName) + '</span>';
+          frag.appendChild(btn);
+        });
+        grid.innerHTML = "";
+        grid.appendChild(frag);
+      }
+
+      function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+      }
+
+      function toggleVote(booth, sl, showUndoToast) {
+        const k = vKey(booth, sl);
+        const prev = votesMap[k] || null;
+        if (prev) {
+          delete votesMap[k];
+        } else {
+          votesMap[k] = Date.now();
+        }
+        saveLS(LS_VOTES, votesMap);
+        renderAll();
+        if (showUndoToast) {
+          showToast(prev ? "ক্রমিক #" + toBn(sl) + " ভোট সরানো হয়েছে" : "ক্রমিক #" + toBn(sl) + " ভোট মার্ক হয়েছে ✓", () => {
+            if (prev) votesMap[k] = prev;
+            else delete votesMap[k];
+            saveLS(LS_VOTES, votesMap);
+            renderAll();
+          });
+        }
+      }
+
+      function toggleStar(booth, sl) {
+        const k = vKey(booth, sl);
+        if (starsMap[k]) delete starsMap[k];
+        else starsMap[k] = 1;
+        saveLS(LS_STARS, starsMap);
+        renderAll();
+      }
+
+      document.getElementById("serialGrid").addEventListener("click", e => {
+        const btn = e.target.closest(".sl-btn");
+        if (!btn) return;
+        const sl = Number(btn.dataset.sl);
+        const v = getBoothVoters().find(x => x[1] === sl);
+        if (!v) return;
+        if (quickTapMode) {
+          toggleVote(v[0], v[1], true);
+        } else {
+          openVoterModal(v);
+        }
+      });
+
+      function openVoterModal(v) {
+        modalVoter = v;
+        const k = vKey(v[0], v[1]);
+        const isVoted = Boolean(votesMap[k]);
+        const isStar = Boolean(starsMap[k]);
+        const secs = (pack.sections && pack.sections[String(v[0])]) || {};
+        const secName = secs[String(v[2])] || ("সেকশন " + toBn(v[2]));
+        const relLbl = v[4] === "H" ? "স্বামী" : (v[4] === "M" ? "মাতা" : "পিতা");
+        const genLbl = v[9] === "F" ? "মহিলা" : (v[9] === "M" ? "পুরুষ" : "অন্যান্য");
+
+        document.getElementById("mTitle").textContent = "ক্রমিক #" + toBn(v[1]) + " (বুথ " + toBn(v[0]) + ")";
+        document.getElementById("mBody").innerHTML =
+          '<div style="font-size:15px;font-weight:700;margin-bottom:4px;">' + escapeHtml(v[3]) + '</div>' +
+          '<div>' + relLbl + ': ' + escapeHtml(v[5]) + '</div>' +
+          '<div>বয়স: ' + toBn(v[8]) + ' • লিঙ্গ: ' + genLbl + ' • বাড়ি নং: ' + escapeHtml(v[6] || "-") + '</div>' +
+          '<div>পাড়া: ' + escapeHtml(secName) + '</div>' +
+          '<div style="margin-top:6px;">অবস্থা: ' +
+          (isVoted ? '<span class="tag tag-voted">ভোট দিয়েছেন ✓</span>' : '<span class="tag" style="background:#f1f5f9;">ভোট বাকি</span>') +
+          (isStar ? '<span class="tag tag-star">★ সমর্থক</span>' : '') +
+          '</div>';
+
+        const vBtn = document.getElementById("mToggleVoteBtn");
+        vBtn.textContent = isVoted ? "ভোট বাতিল করুন" : "ভোট দিয়েছেন ✓";
+        vBtn.className = isVoted ? "btn btn-outline" : "btn btn-voted";
+        const sBtn = document.getElementById("mToggleStarBtn");
+        sBtn.textContent = isStar ? "★ স্টার সরান" : "★ সমর্থক মার্ক";
+        document.getElementById("voterModal").classList.add("open");
+      }
+
+      document.getElementById("mCloseBtn").addEventListener("click", () => {
+        document.getElementById("voterModal").classList.remove("open");
+      });
+      document.getElementById("mToggleVoteBtn").addEventListener("click", () => {
+        if (!modalVoter) return;
+        toggleVote(modalVoter[0], modalVoter[1], false);
+        openVoterModal(modalVoter);
+      });
+      document.getElementById("mToggleStarBtn").addEventListener("click", () => {
+        if (!modalVoter) return;
+        toggleStar(modalVoter[0], modalVoter[1]);
+        openVoterModal(modalVoter);
+      });
+
+      function renderTurnout() {
+        const list = getBoothVoters();
+        const total = list.length;
+        let voted = 0, mTot = 0, mVot = 0, fTot = 0, fVot = 0;
+        const slots = [
+          { label: "৭–৯টা", minH: 0, maxH: 9, cnt: 0 },
+          { label: "৯–১১টা", minH: 9, maxH: 11, cnt: 0 },
+          { label: "১১–১টা", minH: 11, maxH: 13, cnt: 0 },
+          { label: "১–৩টা", minH: 13, maxH: 15, cnt: 0 },
+          { label: "৩–৫টা", minH: 15, maxH: 17, cnt: 0 },
+          { label: "৫টা+", minH: 17, maxH: 25, cnt: 0 }
+        ];
+        const secStats = {};
+        list.forEach(v => {
+          const ts = votesMap[vKey(v[0], v[1])];
+          const secKey = String(v[2]);
+          if (!secStats[secKey]) secStats[secKey] = { tot: 0, vot: 0 };
+          secStats[secKey].tot++;
+          if (v[9] === "M") mTot++; else if (v[9] === "F") fTot++;
+          if (ts) {
+            voted++;
+            secStats[secKey].vot++;
+            if (v[9] === "M") mVot++; else if (v[9] === "F") fVot++;
+            const hr = new Date(ts).getHours();
+            const sl = slots.find(s => hr >= s.minH && hr < s.maxH) || slots[slots.length - 1];
+            sl.cnt++;
+          }
+        });
+
+        const pct = total ? Math.round((voted / total) * 100) : 0;
+        const mPct = mTot ? Math.round((mVot / mTot) * 100) : 0;
+        const fPct = fTot ? Math.round((fVot / fTot) * 100) : 0;
+
+        document.getElementById("stVoted").textContent = toBn(voted) + " (" + toBn(pct) + "%)";
+        document.getElementById("stPending").textContent = toBn(total - voted);
+        document.getElementById("stProgBar").style.width = pct + "%";
+        document.getElementById("stMalePct").textContent = toBn(mPct) + "%";
+        document.getElementById("stMaleLbl").textContent = "পুরুষ ভোট (" + toBn(mVot) + "/" + toBn(mTot) + ")";
+        document.getElementById("stFemalePct").textContent = toBn(fPct) + "%";
+        document.getElementById("stFemaleLbl").textContent = "মহিলা ভোট (" + toBn(fVot) + "/" + toBn(fTot) + ")";
+
+        const maxSlot = Math.max(1, ...slots.map(s => s.cnt));
+        document.getElementById("hourlyChart").innerHTML = slots.map(s => {
+          const w = Math.round((s.cnt / maxSlot) * 100);
+          return '<div class="bar-row"><span>' + s.label + '</span><div class="bar-track"><div class="bar-fill" style="width:' + w + '%"></div></div><span style="text-align:right;font-weight:700;">' + toBn(s.cnt) + '</span></div>';
+        }).join("");
+
+        const secsMeta = (pack.sections && pack.sections[String(currentBooth)]) || {};
+        document.getElementById("sectionChart").innerHTML = Object.keys(secStats).sort((a, b) => Number(a) - Number(b)).map(k => {
+          const st = secStats[k];
+          const p = st.tot ? Math.round((st.vot / st.tot) * 100) : 0;
+          const nm = secsMeta[k] || ("সেকশন " + toBn(k));
+          return '<div style="margin-bottom:10px;"><div style="display:flex;justify-content:space-between;font-size:12px;font-weight:600;"><span>' + escapeHtml(nm) + '</span><span>' + toBn(st.vot) + '/' + toBn(st.tot) + ' (' + toBn(p) + '%)</span></div><div class="prog-track"><div class="prog-fill" style="width:' + p + '%"></div></div></div>';
+        }).join("");
+      }
+
+      function renderPending() {
+        const mode = document.getElementById("pendingFilter").value;
+        const secVal = document.getElementById("pendingSectionFilter").value;
+        const list = getBoothVoters().filter(v => {
+          const k = vKey(v[0], v[1]);
+          const isVoted = Boolean(votesMap[k]);
+          const isStar = Boolean(starsMap[k]);
+          if (secVal !== "all" && String(v[2]) !== secVal) return false;
+          if (mode === "priority_pending") return isStar && !isVoted;
+          if (mode === "all_pending") return !isVoted;
+          if (mode === "all_priority") return isStar;
+          return true;
+        });
+
+        document.getElementById("pendingCountLbl").textContent = "মোট: " + toBn(list.length) + " জন";
+        const box = document.getElementById("pendingList");
+        if (!list.length) {
+          box.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;">এই ফিল্টারে কোনো ভোটার নেই</div>';
+          return;
+        }
+        const shown = list.slice(0, 120);
+        box.innerHTML = shown.map(v => {
+          const k = vKey(v[0], v[1]);
+          const isVoted = Boolean(votesMap[k]);
+          const isStar = Boolean(starsMap[k]);
+          return '<div class="voter-item">' +
+            '<div>' +
+              '<div class="v-name">' + (isStar ? '★ ' : '') + '#' + toBn(v[1]) + ' — ' + escapeHtml(v[3]) + '</div>' +
+              '<div class="v-meta">বাড়ি: ' + escapeHtml(v[6] || "-") + ' • বয়স: ' + toBn(v[8]) + '</div>' +
+            '</div>' +
+            '<div class="row">' +
+              '<button type="button" class="btn btn-sm ' + (isVoted ? 'btn-outline' : 'btn-voted') + '" data-pvote="' + v[1] + '">' + (isVoted ? 'হয়েছে ✓' : 'ভোট মার্ক') + '</button>' +
+            '</div>' +
+          '</div>';
+        }).join("") + (list.length > 120 ? '<div style="text-align:center;font-size:11px;color:var(--muted);padding-top:8px;">প্রথম ১২০ জন দেখানো হচ্ছে (বাকি দেখতে পাড়া ফিল্টার করুন)</div>' : '');
+      }
+
+      document.getElementById("pendingList").addEventListener("click", e => {
+        const btn = e.target.closest("[data-pvote]");
+        if (!btn) return;
+        toggleVote(currentBooth, Number(btn.dataset.pvote), true);
+      });
+
+      function shareOrDownload(filename, content, mime, summary) {
+        if (window.AndroidBridge && typeof window.AndroidBridge.shareFile === "function") {
+          window.AndroidBridge.shareFile(filename, content, mime, summary);
+          return;
+        }
+        try {
+          const blob = new Blob([content], { type: mime });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+          showToast(filename + " ডাউনলোড হয়েছে");
+        } catch (err) {
+          showToast("এক্সপোর্ট করা যায়নি");
+        }
+      }
+
+      function shareTextReport(text) {
+        if (window.AndroidBridge && typeof window.AndroidBridge.shareText === "function") {
+          window.AndroidBridge.shareText(text);
+          return;
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(() => showToast("রিপোর্ট কপি হয়েছে")).catch(() => showToast("রিপোর্ট তৈরি হয়েছে"));
+        } else {
+          showToast("রিপোর্ট তৈরি হয়েছে");
+        }
+      }
+
+      document.getElementById("shareSummaryBtn").addEventListener("click", () => {
+        const list = getBoothVoters();
+        const total = list.length;
+        const voted = list.filter(v => votesMap[vKey(v[0], v[1])]).length;
+        const pct = total ? Math.round((voted / total) * 100) : 0;
+        const msg = (pack.title || "পোলিং রিপোর্ট") + " — বুথ " + toBn(currentBooth) + "\n" +
+          "মোট ভোটার: " + toBn(total) + "\n" +
+          "ভোট পড়েছে: " + toBn(voted) + " (" + toBn(pct) + "%)\n" +
+          "বাকি আছে: " + toBn(total - voted);
+        shareTextReport(msg);
+      });
+
+      document.getElementById("sharePendingBtn").addEventListener("click", () => {
+        const pending = getBoothVoters().filter(v => !votesMap[vKey(v[0], v[1])]).slice(0, 60);
+        const lines = pending.map(v => "#" + v[1] + " " + v[3] + " (বাড়ি " + (v[6] || "-") + ")");
+        const msg = "বুথ " + toBn(currentBooth) + " বাকি ভোটার (প্রথম ৬০):\n" + lines.join("\n");
+        shareTextReport(msg);
+      });
+
+      // Import Ward JSON
+      document.getElementById("importJsonBtn").addEventListener("click", () => {
+        document.getElementById("jsonFileInput").click();
+      });
+      document.getElementById("jsonFileInput").addEventListener("change", e => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => {
+          try {
+            const parsed = JSON.parse(String(ev.target.result || "{}"));
+            if (!Array.isArray(parsed.voters) || !parsed.voters.length) {
+              showToast("সঠিক ওয়ার্ড JSON ফাইল নয়");
+              return;
+            }
+            pack = parsed;
+            saveLS(LS_PACK, pack);
+            currentBooth = null;
+            populateBooths();
+            renderAll();
+            showToast((pack.title || "নতুন ওয়ার্ড") + " লোড হয়েছে (" + toBn(pack.voters.length) + " ভোটার)");
+          } catch (err) {
+            showToast("JSON পড়তে সমস্যা হয়েছে");
+          }
+        };
+        reader.readAsText(file, "utf-8");
+        e.target.value = "";
+      });
+
+      // Quick Booth Generator
+      document.getElementById("createQuickBoothBtn").addEventListener("click", () => {
+        const b = Number(document.getElementById("quickBoothNo").value);
+        const tot = Number(document.getElementById("quickTotalVoters").value);
+        if (!b || b < 1 || !tot || tot < 1 || tot > 3000) {
+          showToast("সঠিক বুথ নম্বর ও ভোটার সংখ্যা দিন");
+          return;
+        }
+        const voters = [];
+        for (let i = 1; i <= tot; i++) {
+          voters.push([b, i, 1, "ভোটার #" + toBn(i), "F", "-", "-", "-", 18, "M", 0, 0, 1]);
+        }
+        pack = {
+          id: "quick_b" + b,
+          city: "কুইক বুথ",
+          ward: String(b),
+          title: "বুথ " + toBn(b) + " (কুইক গ্রিড)",
+          subtitle: "মোট " + toBn(tot) + " জন ভোটার",
+          sections: { [String(b)]: { "1": "মূল তালিকা" } },
+          voters: voters
+        };
+        saveLS(LS_PACK, pack);
+        currentBooth = b;
+        populateBooths();
+        renderAll();
+        showToast("বুথ " + toBn(b) + " তৈরি হয়েছে ✓");
+      });
+
+      // Export & Merge Polling Backup
+      document.getElementById("exportPollingJsonBtn").addEventListener("click", () => {
+        const payload = JSON.stringify({ packId: pack.id, booth: currentBooth, votesMap, starsMap, exportedAt: Date.now() });
+        shareOrDownload("polling_backup_booth_" + currentBooth + ".json", payload, "application/json", "বুথ " + currentBooth + " পোলিং ব্যাকআপ");
+      });
+
+      document.getElementById("exportPollingCsvBtn").addEventListener("click", () => {
+        const rows = ["booth,sl_no,name,house_no,voted,priority_star"];
+        getBoothVoters().forEach(v => {
+          const k = vKey(v[0], v[1]);
+          rows.push([v[0], v[1], '"' + String(v[3] || "").replace(/"/g, '""') + '"', '"' + String(v[6] || "").replace(/"/g, '""') + '"', votesMap[k] ? "YES" : "NO", starsMap[k] ? "STAR" : ""].join(","));
+        });
+        shareOrDownload("polling_booth_" + currentBooth + ".csv", "\uFEFF" + rows.join("\n"), "text/csv", "বুথ " + currentBooth + " পোলিং CSV");
+      });
+
+      document.getElementById("mergeBackupBtn").addEventListener("click", () => {
+        document.getElementById("mergeBackupInput").click();
+      });
+      document.getElementById("mergeBackupInput").addEventListener("change", e => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => {
+          try {
+            const obj = JSON.parse(String(ev.target.result || "{}"));
+            let added = 0;
+            if (obj.votesMap) {
+              Object.keys(obj.votesMap).forEach(k => {
+                if (!votesMap[k]) { votesMap[k] = obj.votesMap[k]; added++; }
+              });
+            }
+            if (obj.starsMap) {
+              Object.keys(obj.starsMap).forEach(k => { starsMap[k] = 1; });
+            }
+            saveLS(LS_VOTES, votesMap);
+            saveLS(LS_STARS, starsMap);
+            renderAll();
+            showToast(toBn(added) + "টি নতুন ভোট মার্জ হয়েছে ✓");
+          } catch (err) {
+            showToast("ব্যাকআপ ফাইল পড়া যায়নি");
+          }
+        };
+        reader.readAsText(file, "utf-8");
+        e.target.value = "";
+      });
+
+      // Reset Votes with Modal
+      document.getElementById("resetVotesBtn").addEventListener("click", () => {
+        document.getElementById("confirmMsg").textContent = "বুথ " + toBn(currentBooth) + "-এর সব ভোটের মার্ক কি মুছে ফেলতে চান?";
+        document.getElementById("confirmModal").classList.add("open");
+      });
+      document.getElementById("confirmCancelBtn").addEventListener("click", () => {
+        document.getElementById("confirmModal").classList.remove("open");
+      });
+      document.getElementById("confirmOkBtn").addEventListener("click", () => {
+        const prefix = currentBooth + "_";
+        Object.keys(votesMap).forEach(k => { if (k.startsWith(prefix)) delete votesMap[k]; });
+        saveLS(LS_VOTES, votesMap);
+        document.getElementById("confirmModal").classList.remove("open");
+        renderAll();
+        showToast("বুথ " + toBn(currentBooth) + " রিসেট হয়েছে");
+      });
+
+      // Controls
+      document.getElementById("boothSelect").addEventListener("change", e => {
+        currentBooth = Number(e.target.value);
+        populateSectionFilter();
+        renderAll();
+      });
+      document.getElementById("searchInput").addEventListener("input", renderGrid);
+      document.getElementById("pendingFilter").addEventListener("change", renderPending);
+      document.getElementById("pendingSectionFilter").addEventListener("change", renderPending);
+
+      document.getElementById("gridFilterChips").addEventListener("click", e => {
+        const chip = e.target.closest(".chip");
+        if (!chip) return;
+        gridFilter = chip.dataset.filter;
+        document.querySelectorAll("#gridFilterChips .chip").forEach(c => c.classList.remove("active"));
+        chip.classList.add("active");
+        renderGrid();
+      });
+
+      document.getElementById("toggleTapModeBtn").addEventListener("click", () => {
+        quickTapMode = !quickTapMode;
+        const btn = document.getElementById("toggleTapModeBtn");
+        btn.textContent = quickTapMode ? "চালু" : "বন্ধ";
+        btn.className = "switch-btn" + (quickTapMode ? " on" : "");
+        document.getElementById("tapModeLabel").textContent = "১-ট্যাপ কুইক ভোট মোড: " + (quickTapMode ? "চালু" : "বন্ধ");
+      });
+
+      document.querySelectorAll(".nav-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const target = btn.dataset.tab;
+          document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
+          document.querySelectorAll(".tab-pane").forEach(p => p.classList.remove("active"));
+          document.getElementById(target).classList.add("active");
+          if (target === "tab-turnout") renderTurnout();
+          if (target === "tab-pending") renderPending();
+        });
+      });
+
+      function renderAll() {
+        updateHeader();
+        renderGrid();
+        renderTurnout();
+        renderPending();
+      }
+
+      populateBooths();
+      renderAll();
+    })();
+  </script>
+</body>
+</html>

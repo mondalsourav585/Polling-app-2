@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.PollingTracker" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="colorPrimary">#1b365d</item>
+        <item name="colorPrimaryDark">#0f223d</item>
+        <item name="colorAccent">#0d9488</item>
+        <item name="android:statusBarColor">#0f223d</item>
+        <item name="android:navigationBarColor">#ffffff</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:fitsSystemWindows">true</item>
+    </style>
+</resources>
